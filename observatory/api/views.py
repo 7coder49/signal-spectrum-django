@@ -52,3 +52,8 @@ class AIInsightView(APIView):
         insights.append("FM broadcast channels remain consistently occupied.")
         
         return Response({"insights": insights})
+
+class ManualTriggerView(APIView):
+    def post(self, request):
+        data = service.trigger_burst()
+        return Response({"status": "BURST_TRIGGERED", "data": data})

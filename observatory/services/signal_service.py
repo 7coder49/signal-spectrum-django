@@ -1,6 +1,9 @@
 from observatory.config.db import get_db
 from observatory.models.signal import SignalLog, AnomalyEvent
+import os
 from observatory.parsers.rf_parser import RFDataParser
+from observatory.parsers.electrosense_parser import ElectrosenseParser
+from observatory.parsers.global_replay_parser import GlobalReplayParser
 from observatory.analyzers.engines import AnomalyEngine, OccupancyEngine
 from datetime import datetime, timedelta
 
@@ -8,8 +11,9 @@ class SignalService:
     def __init__(self):
         self.db = get_db()
         self.use_mock = self.db is None
-        
-        # In-memory storage for mock mode
+        self.electrosense = ElectrosenseParser()
+        self.global_replay = GlobalReplayParser()
+        self.mode = os.getenv('DATA_SOURCE', 'MOCK') # MOCK, ELECTROSENSE, or GLOBAL_REPLAY
         if self.use_mock:
             self._mock_signals = []
             self._mock_anomalies = []
@@ -19,7 +23,12 @@ class SignalService:
             self.anomaly_col = self.db[AnomalyEvent.COLLECTION_NAME]
 
     def ingest_live_data(self, count=5):
-        new_signals = [RFDataParser.generate_mock_signal() for _ in range(count)]
+        if self.mode == 'ELECTROSENSE':
+            new_signals = self.electrosense.fetch_live_data()
+        elif self.mode == 'GLOBAL_REPLAY':
+            new_signals = self.global_replay.get_live_stream()
+        else:
+            new_signals = [RFDataParser.generate_mock_signal() for _ in range(count)]
         
         if self.use_mock:
             self._mock_signals.extend(new_signals)
@@ -61,3 +70,29 @@ class SignalService:
         if self.use_mock:
             return sorted(self._mock_anomalies, key=lambda x: x['timestamp'], reverse=True)[:limit]
         return list(self.anomaly_col.find().sort("timestamp", -1).limit(limit))
+
+    def trigger_burst(self):
+        """
+        Forcefully injects a high-intensity signal burst (Demo Mode).
+        """
+        burst_data = {
+            "timestamp": datetime.utcnow(),
+            "frequency": 1850.2, # Common GSM/LTE frequency
+            "signal_strength": -32.5, # Very strong signal
+            "bandwidth": 200.0,
+            "modulation_type": "QPSK",
+            "source_station": "Mobile-Device-Near",
+            "occupancy_level": 0.98,
+            "anomaly_confidence": 0.99
+        }
+        
+        if self.use_mock:
+            self._mock_signals.append(burst_data)
+            anomaly = AnomalyEngine.detect_spikes([burst_data])[0]
+            self._mock_anomalies.append(anomaly)
+        else:
+            self.logs_col.insert_one(burst_data)
+            anomaly = AnomalyEngine.detect_spikes([burst_data])[0]
+            self.anomaly_col.insert_one(anomaly)
+            
+        return burst_data

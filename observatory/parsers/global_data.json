@@ -1,0 +1,8 @@
+[
+  {"name": "London Heathrow Tower", "freq": 118.5, "strength": -65.2, "mod": "AM", "type": "Aviation"},
+  {"name": "New York FM Master", "freq": 94.7, "strength": -42.1, "mod": "WFM", "type": "Broadcast"},
+  {"name": "Maritime AIS Channel A", "freq": 161.975, "strength": -88.4, "mod": "GMSK", "type": "Maritime"},
+  {"name": "International Space Station", "freq": 145.8, "strength": -102.5, "mod": "FM", "type": "Satellite"},
+  {"name": "Military Transport Band", "freq": 344.0, "strength": -75.0, "mod": "USB", "type": "Defense"},
+  {"name": "NOAA Weather Sat 19", "freq": 137.1, "strength": -92.3, "mod": "NFM", "type": "Weather"}
+]
